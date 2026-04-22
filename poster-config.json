@@ -1,0 +1,22 @@
+{
+  "author": "@冬白AI编程",
+  "avatar": "avatar.jpg",
+  "brandColors": ["#FF4B2B", "#6C5CE7", "#00B894", "#E17055", "#0984E3"],
+  "summaryCards": [
+    {
+      "title": "码住干货",
+      "desc": "放进收藏夹\n避免灵感丢失",
+      "icon": "bookmark"
+    },
+    {
+      "title": "留下红心",
+      "desc": "如果你觉得\n本期干货有用",
+      "icon": "heart"
+    },
+    {
+      "title": "关注作者",
+      "desc": "持续拆解发布\n图文排版体系",
+      "icon": "avatar"
+    }
+  ]
+}
