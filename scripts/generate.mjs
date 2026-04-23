@@ -208,8 +208,8 @@ html, body {
 .googleai-manifesto-quote-mark { font-family: 'Noto Serif SC', serif; font-size: 600px; line-height: 0.7; font-weight: 900; opacity: 0.03; position: absolute; top: -100px; left: -40px; color: ${P.text}; user-select: none; pointer-events: none; }
 .googleai-manifesto-title { font-family: 'Noto Sans SC', sans-serif; font-size: 180px; font-weight: 900; line-height: 1.1; white-space: pre-line; padding-left: 80px; border-left: 32px solid ${P.accent}; letter-spacing: -0.01em; }
 .googleai-manifesto-body { margin-top: 120px; display: flex; flex-direction: column; gap: 80px; }
-.googleai-manifesto-text-main { font-family: 'Noto Serif SC', serif; font-size: 66px; line-height: 1.8; text-align: justify; padding-left: 80px; font-weight: 500; }
-.googleai-manifesto-text-sub { font-family: 'Noto Sans SC', sans-serif; font-size: 54px; line-height: 1.85; text-align: justify; padding-left: 80px; font-weight: 300; color: ${P.textMuted}; }
+.googleai-manifesto-text-main { font-family: 'Noto Serif SC', serif; font-size: 66px; line-height: 1.8; text-align: justify; padding-left: 80px; font-weight: 500; white-space: pre-line; }
+.googleai-manifesto-text-sub { font-family: 'Noto Sans SC', sans-serif; font-size: 54px; line-height: 1.85; text-align: justify; padding-left: 80px; font-weight: 300; color: ${P.textMuted}; white-space: pre-line; }
 
 /* Summary Layout */
 .googleai-summary { position: relative; width: 100%; height: 100%; padding: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
@@ -265,6 +265,36 @@ ${bodyContent}
 </html>`;
 }
 
+// 通用：嵌入本地图片为 base64
+let _inputDir = '.';
+function embedImage(filePath) {
+  const absPath = resolve(_inputDir, filePath);
+  if (!existsSync(absPath)) {
+    console.warn(`[WARN] Image not found: ${absPath}`);
+    return `<div style="padding:40px;border:2px dashed #ccc;color:#999;text-align:center;border-radius:16px;">图片未找到: ${filePath}</div>`;
+  }
+  const ext = filePath.split('.').pop().toLowerCase();
+  const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' };
+  const mime = mimeMap[ext] || 'image/png';
+  const b64 = readFileSync(absPath).toString('base64');
+  return `<img src="data:${mime};base64,${b64}" style="width:100%;border-radius:16px;display:block;" />`;
+}
+
+// 预处理文本中的 {{img:路径}} 占位符
+function preprocessText(text) {
+  if (!text) return text;
+  return text.replace(/\{\{img:(.+?)\}\}/g, (_, path) => embedImage(path.trim()));
+}
+
+// 通用：按 \n 切割文本为多个块
+function splitParagraphs(text, cssClass) {
+  if (!text) return '';
+  const processed = preprocessText(text);
+  const parts = processed.split('\n').filter(p => p.trim());
+  if (parts.length <= 1) return `<div class="${cssClass}">${processed}</div>`;
+  return parts.map(p => `<div class="${cssClass}">${p}</div>`).join('\n            ');
+}
+
 // Cover 模板
 function generateCover(slide, pageNum, totalPages) {
   const tag = escapeHtml(slide.tag || '标签');
@@ -285,7 +315,7 @@ function generateCover(slide, pageNum, totalPages) {
     <div class="googleai-cover">
         <div class="googleai-cover-main">
             <div class="googleai-cover-title">${title}</div>
-            <div class="googleai-cover-quote">${quote}</div>
+            ${splitParagraphs(quote, 'googleai-cover-quote')}
             <div class="googleai-cover-brand"></div>
         </div>
         <div class="googleai-cover-footer">
@@ -311,15 +341,15 @@ function generateArticle(slide, pageNum, totalPages) {
 
   let cardHtml = '';
   if (text1) {
-    cardHtml += `<div class="googleai-article-card"><div class="googleai-article-card-accent"></div><div class="googleai-article-card-text">${text1}</div></div>`;
+    cardHtml += `<div class="googleai-article-card"><div class="googleai-article-card-accent"></div>${splitParagraphs(text1, 'googleai-article-card-text')}</div>`;
   }
 
   let extraText = '';
   if (text2) {
-    extraText += `<div class="googleai-article-text">${text2}</div>`;
+    extraText += splitParagraphs(text2, 'googleai-article-text');
   }
   if (text3) {
-    extraText += `<div class="googleai-article-text">${text3}</div>`;
+    extraText += splitParagraphs(text3, 'googleai-article-text');
   }
 
   return `    <div class="googleai-header">
@@ -376,7 +406,7 @@ function generateSteps(slide, pageNum, totalPages) {
     </div>
     <div class="googleai-steps">
         <h2 class="googleai-steps-title">${title}</h2>
-        <div class="googleai-steps-intro">${text1}</div>
+        ${splitParagraphs(text1, 'googleai-steps-intro')}
         <div class="googleai-steps-list">
             ${stepsHtml}
         </div>
@@ -422,14 +452,14 @@ function generateCards(slide, pageNum, totalPages) {
                     ${icons[0]}
                     Concept A.
                 </div>
-                <div class="googleai-card-text">${text1}</div>
+                ${splitParagraphs(text1, 'googleai-card-text')}
             </div>
             <div class="googleai-card-item googleai-card-item-b">
                 <div class="googleai-card-label">
                     ${icons[1]}
                     Concept B.
                 </div>
-                <div class="googleai-card-text">${text2}</div>
+                ${splitParagraphs(text2, 'googleai-card-text')}
             </div>`;
   }
 
@@ -477,10 +507,10 @@ function generateInDepth(slide, pageNum, totalPages) {
             <h2 class="googleai-indepth-title">${title}</h2>
         </div>
         <div class="googleai-indepth-body">
-            <div class="googleai-indepth-col-text">${text1}</div>
-            <div class="googleai-indepth-col-text">${text2}</div>
+            ${splitParagraphs(text1, 'googleai-indepth-col-text')}
+            ${splitParagraphs(text2, 'googleai-indepth-col-text')}
         </div>
-        ${text3 ? `<div class="googleai-indepth-bottom"><div class="googleai-indepth-bottom-text">${text3}</div></div>` : ''}
+        ${text3 ? `<div class="googleai-indepth-bottom">${splitParagraphs(text3, 'googleai-indepth-bottom-text')}</div>` : ''}
     </div>`;
 }
 
@@ -506,8 +536,8 @@ function generateManifesto(slide, pageNum, totalPages) {
             <div class="googleai-manifesto-quote-mark">"</div>
             <div class="googleai-manifesto-title">${title}</div>
             <div class="googleai-manifesto-body">
-                <div class="googleai-manifesto-text-main">${text1}</div>
-                ${text2 ? `<div class="googleai-manifesto-text-sub">${text2}</div>` : ''}
+                ${text1.split('\n').map(p => `<div class="googleai-manifesto-text-main">${p}</div>`).join('\n                ')}
+                ${text2 ? text2.split('\n').map(p => `<div class="googleai-manifesto-text-sub">${p}</div>`).join('\n                ') : ''}
             </div>
         </div>
     </div>`;
@@ -532,7 +562,7 @@ function generateSummary(slide, pageNum, totalPages) {
     </div>
     <div class="googleai-summary">
         <h2 class="googleai-summary-title">${title}</h2>
-        <div class="googleai-summary-intro">${text1}</div>
+        ${splitParagraphs(text1, 'googleai-summary-intro')}
         <div class="googleai-summary-cards">
             <div class="googleai-summary-card googleai-summary-card-1">
                 <div class="googleai-summary-card-icon">
@@ -716,6 +746,7 @@ async function main() {
   console.log(`[CONFIG] author: ${CONFIG.author}, avatar: ${CONFIG.avatarB64 ? 'yes' : 'no'}, theme: ${brandColor}`);
 
   // 读取输入
+  _inputDir = dirname(resolve(inputPath));
   let data;
   try {
     const inputContent = readFileSync(inputPath, 'utf-8');
